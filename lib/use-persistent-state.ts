@@ -5,16 +5,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 /**
  * A useState replacement that transparently persists to localStorage.
  *
- * Hydration strategy: we start from `initialValue` on both server and first
- * client render (so SSR markup matches), then read localStorage in a layout-
- * phase effect on mount. Writes are gated until that read has happened, which
- * prevents the initial value from clobbering previously-saved state.
+ * Hydration strategy: the first client render uses `initialValue` (so SSR
+ * markup matches), then a mount effect reads localStorage and, if a saved
+ * value exists, swaps it in. Writes are gated behind a `ready` flag that is
+ * only flipped true AFTER the read effect has run, so the initial value can
+ * never clobber previously-saved state — even if `value` changes in the same
+ * commit as hydration.
  */
 export function usePersistentState<T>(key: string, initialValue: T) {
   const [value, setValue] = useState<T>(initialValue)
-  const hydrated = useRef(false)
+  const [ready, setReady] = useState(false)
+  const keyRef = useRef(key)
+  keyRef.current = key
 
-  // Read persisted value once, before any write can occur.
+  // Read persisted value once on mount, then unlock writes.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(key)
@@ -23,29 +27,28 @@ export function usePersistentState<T>(key: string, initialValue: T) {
       }
     } catch {
       /* ignore malformed storage */
-    } finally {
-      hydrated.current = true
     }
+    setReady(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
 
-  // Persist on change, but never before hydration has completed.
+  // Persist on change, but never before the initial read has completed.
   useEffect(() => {
-    if (!hydrated.current) return
+    if (!ready) return
     try {
       window.localStorage.setItem(key, JSON.stringify(value))
     } catch {
       /* storage full / unavailable */
     }
-  }, [key, value])
+  }, [key, value, ready])
 
   const clear = useCallback(() => {
     try {
-      window.localStorage.removeItem(key)
+      window.localStorage.removeItem(keyRef.current)
     } catch {
       /* ignore */
     }
-  }, [key])
+  }, [])
 
   return [value, setValue, clear] as const
 }
