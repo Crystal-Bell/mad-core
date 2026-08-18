@@ -1,0 +1,99 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+
+  --font-sans: 'Geist', 'Geist Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', ui-monospace, monospace;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+}
+
+:root {
+  color-scheme: dark;
+  /* Industrial dark palette: near-black steel, warm orange signal, muted gray */
+  --background: oklch(0.16 0.006 260);
+  --foreground: oklch(0.92 0.01 90);
+  --card: oklch(0.2 0.008 260);
+  --card-foreground: oklch(0.92 0.01 90);
+  --popover: oklch(0.2 0.008 260);
+  --popover-foreground: oklch(0.92 0.01 90);
+  --primary: oklch(0.7 0.19 45);
+  --primary-foreground: oklch(0.16 0.02 45);
+  --secondary: oklch(0.26 0.008 260);
+  --secondary-foreground: oklch(0.92 0.01 90);
+  --muted: oklch(0.24 0.008 260);
+  --muted-foreground: oklch(0.64 0.01 90);
+  --accent: oklch(0.7 0.19 45);
+  --accent-foreground: oklch(0.16 0.02 45);
+  --destructive: oklch(0.58 0.2 27);
+  --destructive-foreground: oklch(0.96 0.01 90);
+  --success: oklch(0.68 0.15 150);
+  --warning: oklch(0.78 0.16 80);
+  --border: oklch(0.32 0.008 260);
+  --input: oklch(0.28 0.008 260);
+  --ring: oklch(0.7 0.19 45);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+/* Industrial engineering grid background */
+.mad-grid {
+  background-image:
+    linear-gradient(to right, oklch(0.32 0.008 260 / 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.32 0.008 260 / 0.35) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.mad-grid-fine {
+  background-image:
+    linear-gradient(to right, oklch(0.32 0.008 260 / 0.25) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.32 0.008 260 / 0.25) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+.mad-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    oklch(0.7 0.19 45 / 0.05) 0px,
+    oklch(0.7 0.19 45 / 0.05) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
