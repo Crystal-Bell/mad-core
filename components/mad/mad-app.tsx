@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Compass, HardHat, MapPinned, Radiation, RotateCcw } from 'lucide-react'
+import { Compass, HardHat, MapPinned, Network, Radiation, RotateCcw } from 'lucide-react'
 import { usePersistentState } from '@/lib/use-persistent-state'
 import type { SiteState } from '@/lib/mad-types'
 import { DisclaimerBanner } from './disclaimer-banner'
@@ -10,14 +10,16 @@ import { ActionButton } from './action-button'
 import { ModuleProperty } from './module-property'
 import { ModuleExecution } from './module-execution'
 import { ModuleGear } from './module-gear'
+import { ModuleExchange } from './module-exchange'
 import { cn } from '@/lib/utils'
 
-type TabId = 'property' | 'execution' | 'gear'
+type TabId = 'property' | 'execution' | 'gear' | 'exchange'
 
 const TABS: { id: TabId; label: string; short: string; icon: typeof MapPinned }[] = [
   { id: 'property', label: 'Property Intelligence', short: 'MOD-01', icon: MapPinned },
   { id: 'execution', label: 'Phased Dwelling Execution', short: 'MOD-02', icon: HardHat },
   { id: 'gear', label: 'M.A.D. Utility & Gear', short: 'MOD-03', icon: Compass },
+  { id: 'exchange', label: 'Local Material Exchange', short: 'MOD-04', icon: Network },
 ]
 
 export function MadApp() {
@@ -152,6 +154,7 @@ export function MadApp() {
           {tab === 'property' && <ModuleProperty disabled={!active} />}
           {tab === 'execution' && <ModuleExecution disabled={!active} />}
           {tab === 'gear' && <ModuleGear disabled={!active} />}
+          {tab === 'exchange' && <ModuleExchange disabled={!active} />}
         </div>
       </div>
 
