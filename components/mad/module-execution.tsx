@@ -4,8 +4,10 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, Circle, RotateCcw, Wrench } from 'lucide-react'
 import { usePersistentState } from '@/lib/use-persistent-state'
 import type { BlueprintRow, Milestone } from '@/lib/mad-types'
-import { Panel, Field, TextInput } from './panel'
+import { generateBlueprint } from '@/lib/mad-routing'
+import { Panel, Field } from './panel'
 import { ActionButton } from './action-button'
+import { FabricationMatrix } from './fabrication-matrix'
 import { cn } from '@/lib/utils'
 
 const DEFAULT_MILESTONES: Milestone[] = [
@@ -14,115 +16,6 @@ const DEFAULT_MILESTONES: Milestone[] = [
   { key: 'framing', label: 'Framing', detail: 'Cenote shell ribs & radial lattice', status: 'pending' },
   { key: 'finishes', label: 'Finishes', detail: 'Envelope seal, thermal mass & fit-out', status: 'pending' },
 ]
-
-type Route = {
-  domain: string
-  keywords: string[]
-  directive: string
-}
-
-// Multi-domain functional routing engine. Ordered by specificity — the first
-// category whose keyword is found in the material wins. Bio-media precedes
-// timber so "cardboard" is never mis-matched by the timber keyword "board".
-const ROUTES: Route[] = [
-  {
-    domain: 'Structural Module → Shell',
-    keywords: ['shipping container', 'container', 'conex', 'isbu', 'culvert', 'tank'],
-    directive:
-      'Now: inspect corner castings for corrosion & document floor treatment for off-gassing. Later: set on the rubble-trench footing as a braced shell module — cut openings only after temporary bracing is in place.',
-  },
-  {
-    domain: 'Rammed Earth → Mass Walls',
-    keywords: ['tire', 'tyre'],
-    directive:
-      'Now: clean, sort by diameter & pre-stage fill soil. Later: ram earth in staggered courses for retaining footing or thermal-mass wall (~300+ lb/tire once packed); pin courses & parge exposed faces.',
-  },
-  {
-    domain: 'Bio-Media → Compost / Seed-Starting',
-    keywords: [
-      'egg crate', 'egg carton', 'cardboard', 'organic', 'compost', 'soil', 'manure',
-      'leaves', 'leaf', 'straw', 'coffee ground', 'sawdust', 'newspaper', 'wood chip',
-      'mulch', 'food scrap', 'kitchen waste', 'peat', 'hay', 'grass clipping',
-    ],
-    directive:
-      'Now: shred & wet as carbon "browns"; layer 3:1 with green organics in the hot-compost bay. Later: use egg-crate cells for seed-starting plugs and finished humus to top-dress the garden berm during Finishes.',
-  },
-  {
-    domain: 'Textile → M.A.D. W.E.A.R. Modules',
-    keywords: [
-      'fabric', 'thread', 'sewing', 'machine part', 'webbing', 'canvas', 'denim',
-      'cloth', 'textile', 'nylon', 'cotton', 'zipper', 'strap', 'buckle',
-      'upholstery', 'tarp', 'mesh', 'velcro', 'grommet',
-    ],
-    directive:
-      'Now: launder, de-thread & spool reusable notions; QC machine parts against the W.E.A.R. jig. Later: cut to pattern for load-bearing tool aprons, gear-harness webbing & insulated envelope liners.',
-  },
-  {
-    domain: 'Glazing & Repair → Thermal Envelope',
-    keywords: [
-      'glass', 'bottle', 'window', 'pane', 'sealant', 'glazing', 'mirror', 'acrylic',
-      'plexi', 'polycarbonate', 'caulk', 'silicone', 'epoxy', 'resin', 'adhesive',
-      'gasket', 'door',
-    ],
-    directive:
-      'Now: measure & label panes by clear dimension; decant sealants and check cure dates. Later: install as daylight glazing in the thermal envelope; stage adhesives at repair ports for gasket & crack remediation.',
-  },
-  {
-    domain: 'Structural Masonry → Foundation / Walls',
-    keywords: [
-      'cement block', 'cinder block', 'cinderblock', 'cinder', 'concrete block',
-      'breeze block', 'concrete', 'cmu', 'brick', 'block', 'stone', 'masonry',
-      'mortar', 'paver', 'cobble', 'boulder', 'rubble',
-    ],
-    directive:
-      'Now: dry-stack a test course to prove the load path & sort intact vs. spalled units. Later: bed in lime mortar for the stem wall / ring-beam footing (~2,800 psi bearing on sound CMU); divert half-blocks to thermal-mass infill.',
-  },
-  {
-    domain: 'Structural Steel → Ties / Anchors',
-    keywords: [
-      'steel', 'rebar', 'metal', 'iron', 'angle iron', 'pipe', 'tube', 'wire',
-      'sheet metal', 'aluminum', 'fastener', 'bolt', 'bracket',
-    ],
-    directive:
-      'Now: wire-brush surface rust, straighten & bundle by gauge/length. Later: fabricate tension ties, anchor straps & lattice connectors — verify capacity with an engineer before load (est. ~40 ksi yield on unknown mild steel).',
-  },
-  {
-    domain: 'Structural Timber → Framing / Formwork',
-    keywords: [
-      'pallet', 'wood', 'lumber', 'board', 'plank', 'timber', 'beam', 'joist',
-      'plywood', 'osb', 'stud', 'batten', 'dunnage',
-    ],
-    directive:
-      'Now: de-nail, sort by grade & moisture-check; quarantine rot or insect damage. Later: mill for cenote shell ribs, radial lattice & reusable formwork; treat all ground-contact ends.',
-  },
-]
-
-const FALLBACK_DIRECTIVE =
-  'Now: photograph, measure & tag with a salvage ID; store dry under cover and flag hazards (sharp / toxic / rot). Later: re-run through the router after cleaning, or divert to the barter / scrap stream if no build role emerges by Framing.'
-
-function classify(material: string): { domain: string; directive: string } {
-  const m = material.toLowerCase()
-  for (const route of ROUTES) {
-    if (route.keywords.some((k) => m.includes(k))) {
-      return { domain: route.domain, directive: route.directive }
-    }
-  }
-  return { domain: 'Unclassified → Triage Queue', directive: FALLBACK_DIRECTIVE }
-}
-
-function generateBlueprint(materials: string): BlueprintRow[] {
-  const tokens = materials
-    .split(/[,\n]/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-
-  if (tokens.length === 0) return []
-
-  return tokens.slice(0, 12).map((mat) => {
-    const { domain, directive } = classify(mat)
-    return { phase: domain, input: mat, directive }
-  })
-}
 
 export function ModuleExecution({ disabled }: { disabled: boolean }) {
   const [milestones, setMilestones] = usePersistentState<Milestone[]>('mad.milestones', DEFAULT_MILESTONES)
@@ -152,6 +45,7 @@ export function ModuleExecution({ disabled }: { disabled: boolean }) {
   }
 
   return (
+    <div className="flex flex-col gap-5">
     <div className="grid gap-5 lg:grid-cols-2">
       <Panel title="Cenote Core — Milestone Tracker" code={`${progress}%`}>
         <div className="mb-4 h-1.5 w-full bg-muted">
@@ -277,6 +171,9 @@ export function ModuleExecution({ disabled }: { disabled: boolean }) {
           )}
         </Panel>
       </div>
+    </div>
+
+      <FabricationMatrix materials={materials} disabled={disabled} />
     </div>
   )
 }
