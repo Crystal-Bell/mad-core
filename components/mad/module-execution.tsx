@@ -15,6 +15,101 @@ const DEFAULT_MILESTONES: Milestone[] = [
   { key: 'finishes', label: 'Finishes', detail: 'Envelope seal, thermal mass & fit-out', status: 'pending' },
 ]
 
+type Route = {
+  domain: string
+  keywords: string[]
+  directive: string
+}
+
+// Multi-domain functional routing engine. Ordered by specificity — the first
+// category whose keyword is found in the material wins. Bio-media precedes
+// timber so "cardboard" is never mis-matched by the timber keyword "board".
+const ROUTES: Route[] = [
+  {
+    domain: 'Structural Module → Shell',
+    keywords: ['shipping container', 'container', 'conex', 'isbu', 'culvert', 'tank'],
+    directive:
+      'Now: inspect corner castings for corrosion & document floor treatment for off-gassing. Later: set on the rubble-trench footing as a braced shell module — cut openings only after temporary bracing is in place.',
+  },
+  {
+    domain: 'Rammed Earth → Mass Walls',
+    keywords: ['tire', 'tyre'],
+    directive:
+      'Now: clean, sort by diameter & pre-stage fill soil. Later: ram earth in staggered courses for retaining footing or thermal-mass wall (~300+ lb/tire once packed); pin courses & parge exposed faces.',
+  },
+  {
+    domain: 'Bio-Media → Compost / Seed-Starting',
+    keywords: [
+      'egg crate', 'egg carton', 'cardboard', 'organic', 'compost', 'soil', 'manure',
+      'leaves', 'leaf', 'straw', 'coffee ground', 'sawdust', 'newspaper', 'wood chip',
+      'mulch', 'food scrap', 'kitchen waste', 'peat', 'hay', 'grass clipping',
+    ],
+    directive:
+      'Now: shred & wet as carbon "browns"; layer 3:1 with green organics in the hot-compost bay. Later: use egg-crate cells for seed-starting plugs and finished humus to top-dress the garden berm during Finishes.',
+  },
+  {
+    domain: 'Textile → M.A.D. W.E.A.R. Modules',
+    keywords: [
+      'fabric', 'thread', 'sewing', 'machine part', 'webbing', 'canvas', 'denim',
+      'cloth', 'textile', 'nylon', 'cotton', 'zipper', 'strap', 'buckle',
+      'upholstery', 'tarp', 'mesh', 'velcro', 'grommet',
+    ],
+    directive:
+      'Now: launder, de-thread & spool reusable notions; QC machine parts against the W.E.A.R. jig. Later: cut to pattern for load-bearing tool aprons, gear-harness webbing & insulated envelope liners.',
+  },
+  {
+    domain: 'Glazing & Repair → Thermal Envelope',
+    keywords: [
+      'glass', 'bottle', 'window', 'pane', 'sealant', 'glazing', 'mirror', 'acrylic',
+      'plexi', 'polycarbonate', 'caulk', 'silicone', 'epoxy', 'resin', 'adhesive',
+      'gasket', 'door',
+    ],
+    directive:
+      'Now: measure & label panes by clear dimension; decant sealants and check cure dates. Later: install as daylight glazing in the thermal envelope; stage adhesives at repair ports for gasket & crack remediation.',
+  },
+  {
+    domain: 'Structural Masonry → Foundation / Walls',
+    keywords: [
+      'cement block', 'cinder block', 'cinderblock', 'cinder', 'concrete block',
+      'breeze block', 'concrete', 'cmu', 'brick', 'block', 'stone', 'masonry',
+      'mortar', 'paver', 'cobble', 'boulder', 'rubble',
+    ],
+    directive:
+      'Now: dry-stack a test course to prove the load path & sort intact vs. spalled units. Later: bed in lime mortar for the stem wall / ring-beam footing (~2,800 psi bearing on sound CMU); divert half-blocks to thermal-mass infill.',
+  },
+  {
+    domain: 'Structural Steel → Ties / Anchors',
+    keywords: [
+      'steel', 'rebar', 'metal', 'iron', 'angle iron', 'pipe', 'tube', 'wire',
+      'sheet metal', 'aluminum', 'fastener', 'bolt', 'bracket',
+    ],
+    directive:
+      'Now: wire-brush surface rust, straighten & bundle by gauge/length. Later: fabricate tension ties, anchor straps & lattice connectors — verify capacity with an engineer before load (est. ~40 ksi yield on unknown mild steel).',
+  },
+  {
+    domain: 'Structural Timber → Framing / Formwork',
+    keywords: [
+      'pallet', 'wood', 'lumber', 'board', 'plank', 'timber', 'beam', 'joist',
+      'plywood', 'osb', 'stud', 'batten', 'dunnage',
+    ],
+    directive:
+      'Now: de-nail, sort by grade & moisture-check; quarantine rot or insect damage. Later: mill for cenote shell ribs, radial lattice & reusable formwork; treat all ground-contact ends.',
+  },
+]
+
+const FALLBACK_DIRECTIVE =
+  'Now: photograph, measure & tag with a salvage ID; store dry under cover and flag hazards (sharp / toxic / rot). Later: re-run through the router after cleaning, or divert to the barter / scrap stream if no build role emerges by Framing.'
+
+function classify(material: string): { domain: string; directive: string } {
+  const m = material.toLowerCase()
+  for (const route of ROUTES) {
+    if (route.keywords.some((k) => m.includes(k))) {
+      return { domain: route.domain, directive: route.directive }
+    }
+  }
+  return { domain: 'Unclassified → Triage Queue', directive: FALLBACK_DIRECTIVE }
+}
+
 function generateBlueprint(materials: string): BlueprintRow[] {
   const tokens = materials
     .split(/[,\n]/)
@@ -23,25 +118,10 @@ function generateBlueprint(materials: string): BlueprintRow[] {
 
   if (tokens.length === 0) return []
 
-  const phases = ['Clearing', 'Foundation', 'Framing', 'Finishes']
-  return tokens.slice(0, 12).map((mat, i) => {
-    const phase = phases[i % phases.length]
-    const directive = deriveDirective(mat, phase)
-    return { phase, input: mat, directive }
+  return tokens.slice(0, 12).map((mat) => {
+    const { domain, directive } = classify(mat)
+    return { phase: domain, input: mat, directive }
   })
-}
-
-function deriveDirective(material: string, phase: string): string {
-  const m = material.toLowerCase()
-  if (m.includes('pallet')) return `Deconstruct into deck boards; use for ${phase.toLowerCase()} formwork & temporary bracing.`
-  if (m.includes('tire')) return `Ram-earth ${phase === 'Foundation' ? 'retaining footing' : 'thermal-mass wall course'}; stagger joints.`
-  if (m.includes('bottle') || m.includes('glass')) return `Set as light-admitting cob infill during ${phase.toLowerCase()}.`
-  if (m.includes('steel') || m.includes('rebar') || m.includes('metal')) return `Fabricate ${phase} tension ties & anchor straps; verify load with engineer.`
-  if (m.includes('shipping') || m.includes('container')) return `Position as structural ${phase.toLowerCase()} module; cut openings after bracing.`
-  if (m.includes('wood') || m.includes('lumber') || m.includes('board')) return `Mill & grade for ${phase.toLowerCase()} ribs / decking; treat contact ends.`
-  if (m.includes('concrete') || m.includes('rubble') || m.includes('stone')) return `Reuse as ${phase === 'Foundation' ? 'rubble-trench drainage fill' : 'gabion thermal mass'}.`
-  if (m.includes('window') || m.includes('door')) return `Template ${phase} rough openings around salvaged unit dimensions.`
-  return `Assess ${material} for ${phase.toLowerCase()} reuse; log dimensions & condition before commit.`
 }
 
 export function ModuleExecution({ disabled }: { disabled: boolean }) {
@@ -62,7 +142,12 @@ export function ModuleExecution({ disabled }: { disabled: boolean }) {
   function generate() {
     const rows = generateBlueprint(materials)
     setBlueprint(rows)
-    setFlash(rows.length ? `Generated ${rows.length} tailored phase directives.` : 'Enter at least one material.')
+    const domains = new Set(rows.map((r) => r.phase)).size
+    setFlash(
+      rows.length
+        ? `Routed ${rows.length} item${rows.length > 1 ? 's' : ''} across ${domains} functional domain${domains > 1 ? 's' : ''}.`
+        : 'Enter at least one material.',
+    )
     setTimeout(() => setFlash(null), 2500)
   }
 
@@ -133,7 +218,7 @@ export function ModuleExecution({ disabled }: { disabled: boolean }) {
               value={materials}
               onChange={(e) => setMaterials(e.target.value)}
               rows={5}
-              placeholder="reclaimed pallets, used tires, glass bottles, steel rebar, salvaged windows…"
+              placeholder="cement blocks, cardboard, canvas webbing, window panes, steel rebar…"
               className="w-full resize-none border border-input bg-background px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </Field>
@@ -162,7 +247,7 @@ export function ModuleExecution({ disabled }: { disabled: boolean }) {
                 <thead>
                   <tr className="bg-secondary/60">
                     <th className="border-b border-border px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                      Phase
+                      Route / Domain
                     </th>
                     <th className="border-b border-border px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                       Input
